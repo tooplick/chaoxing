@@ -27,6 +27,8 @@ _RE_TASK_FAIL = re.compile(r"任务重试次数达到上限")
 _RE_COURSE = re.compile(r"(?:开始学习课程|正在读取课程章节): (.+)")
 # "开始任务: xxx.mp4, 总时长: 267s, 已进行: 0s" -> 提取文件名与总时长(含尾部已进行)
 _RE_VIDEO_START = re.compile(r"开始任务: (.+?), 总时长: (\d+)s(?:, 已进行: \d+s)?")
+# 403 行携带被拦任务点: "出现403报错... jobid=1599..., objectId=1676a..."
+_RE_BLOCK_JOB = re.compile(r"出现403报错.*?jobid=(\w+)(?:, objectId=(\w+))?")
 
 
 class AccountRun:
@@ -51,6 +53,8 @@ class AccountRun:
         self.needs_attention = False
         # 拦截原因判别: None(待判别/未知) | "face"(人脸采集) | "cooldown"(风控冷却)
         self.blocked_reason: str | None = None
+        # 被 403 拦截的任务点 {jobid, objectid}, 供人脸二维码直接定位
+        self.blocked_job: dict | None = None
         self.diagnosed = False
         self.diagnosing = False
         # 各并发视频的实时观看进度 {视频名: {percent,pos,total,updated}}
@@ -88,6 +92,7 @@ class AccountRun:
                 "state": self.state,
                 "needs_attention": self.needs_attention,
                 "blocked_reason": self.blocked_reason,
+                "blocked_job": self.blocked_job,
                 "videos": videos,
                 "started_at": self.started_at,
                 "finished_at": self.finished_at,
@@ -146,6 +151,9 @@ class AccountRun:
 
         if "出现403报错" in text or "多次验证码通关失败" in text:
             self.block_hits += 1
+            # 记录被拦的任务点(铁事实), 人脸二维码优先用它定位, 不依赖页面标记
+            if m := _RE_BLOCK_JOB.search(text):
+                self.blocked_job = {"jobid": m.group(1), "objectid": m.group(2) or ""}
 
 
 class RunManager:

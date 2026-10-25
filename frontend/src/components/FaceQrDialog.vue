@@ -8,7 +8,13 @@ import { useIsMobile } from '../composables/useIsMobile'
 const { isMobile } = useIsMobile()
 import type { Account } from '../types'
 
-const props = defineProps<{ modelValue: boolean; account: Account | null; courseId?: string }>()
+const props = defineProps<{
+  modelValue: boolean
+  account: Account | null
+  courseId?: string
+  /** 被 403 拦截的任务点(jobid:objectId), 存在时走快路径直接出码 */
+  blockedJob?: string
+}>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void; (e: 'verified'): void }>()
 
 const visible = computed({
@@ -30,7 +36,7 @@ async function loadQr() {
   error.value = ''
   done.value = false
   try {
-    const res = await api.faceQr(props.account.id, props.courseId)
+    const res = await api.faceQr(props.account.id, props.courseId, props.blockedJob)
     if (!res.ok || !res.qr_base64) throw new Error(res.msg || '获取二维码失败')
     qrImage.value = `data:image/png;base64,${res.qr_base64}`
     chapter.value = res.chapter ?? ''

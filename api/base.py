@@ -798,8 +798,8 @@ class Chaoxing:
             )
 
             # 若出现两个rt参数都返回403的情况, 则跳过当前任务
-            logger.error("出现403报错, 尝试修复无效, 正在跳过当前任务点... jobid={}, 请求详情见TRACE日志",
-                         _job.get("jobid"))
+            logger.error("出现403报错, 尝试修复无效, 正在跳过当前任务点... jobid={}, objectId={}, 请求详情见TRACE日志",
+                         _job.get("jobid"), _job.get("objectid"))
             logger.trace("403请求url: {}", resp.url)
             logger.trace("403请求头: {}", dict(_session.headers) | headers)
             return False, 403

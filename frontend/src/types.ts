@@ -39,6 +39,7 @@ export interface AccountStatus {
   state: RunState
   needs_attention?: boolean
   blocked_reason?: BlockedReason
+  blocked_job?: { jobid: string; objectid: string } | null
   videos?: VideoProgress[]
   started_at?: string
   finished_at?: string | null

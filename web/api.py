@@ -650,6 +650,13 @@ def face_qr(account_id):
     ]
     if chapter_title:
         cli_args += ["--chapter-title", chapter_title]
+    # 被 403 拦截的任务点是铁事实, 走快路径直接出码(不依赖页面标记)
+    blocked_job = str(data.get("job", "")).strip() or (
+        f"{run.blocked_job['jobid']}:{run.blocked_job.get('objectid', '')}"
+        if run and run.blocked_job else ""
+    )
+    if blocked_job:
+        cli_args += ["--job", blocked_job]
     result = _run_cli(cli_args, account_dir, timeout=120)
     if result.get("ok") and result.get("status_tokens"):
         _face_tokens[account_id] = result["status_tokens"]

@@ -397,7 +397,11 @@ def cmd_chapter_jobs(args) -> None:
 
 
 def cmd_face_qr(args) -> None:
-    """获取人脸采集二维码(自动在课程章节中定位有人脸要求的视频任务点)."""
+    """获取人脸采集二维码.
+
+    --job jobid:objectId 时走快路径: 直接用被拦任务点出码(不依赖页面标记,
+    页面标记在部分账号/环境下不渲染); 否则扫描章节定位人脸需求.
+    """
     from web.faceqr import fetch_study_html, fill_tokens_from_job, has_face_demand, parse_study_tokens, produce_face_qr
 
     chaoxing, result = _login(args.config)
@@ -406,6 +410,32 @@ def cmd_face_qr(args) -> None:
         sys.exit(1)
 
     session, course_id, clazz_id, cpi, tree_enc, ordered = _face_context(chaoxing, args)
+
+    # 快路径: 被 403 拦截的任务点是事实, 定位其章节后直接出码
+    if args.job:
+        jobid, objectid = (args.job.split(":") + [""])[:2]
+        candidates = ordered
+        if args.chapter_title:
+            hits = [p for p in ordered if args.chapter_title in p.get("title", "")]
+            candidates = hits or ordered
+        for point in candidates[:5]:
+            study_html = fetch_study_html(session, course_id, clazz_id, cpi, point["id"], tree_enc)
+            tokens = parse_study_tokens(study_html)
+            if not tokens:
+                continue
+            tokens = fill_tokens_from_job(
+                tokens, {"jobid": jobid, "objectid": objectid, "mid": tokens.get("mid", "")}, point["id"]
+            )
+            payload = produce_face_qr(session, tokens)
+            _emit({
+                "ok": True,
+                "chapter": point.get("title", ""),
+                "qr_base64": payload["qr_base64"],
+                "status_tokens": payload["status_tokens"],
+            })
+            return
+        _emit({"ok": False, "msg": "快路径未能取得章节页面令牌, 请重试"}, ok=False)
+        sys.exit(1)
 
     course_dict = {"courseId": course_id, "clazzId": clazz_id, "cpi": cpi, "title": ""}
     for point in ordered[:50]:
@@ -472,6 +502,7 @@ def main() -> None:
     p.add_argument("--config", required=True)
     p.add_argument("--course", required=True, help="courseId:clazzId:cpi")
     p.add_argument("--chapter-title", default="", help="优先匹配的章节标题(运行中被拦截的章节)")
+    p.add_argument("--job", default="", help="jobid:objectId 快路径(被403拦截的任务点)")
 
     p = sub.add_parser("face-check")
     p.add_argument("--config", required=True)

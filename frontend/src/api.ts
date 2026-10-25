@@ -73,9 +73,10 @@ export const api = {
   }) => post(`/api/accounts/${id}/start`, payload),
   stopTask: (id: string) => post(`/api/accounts/${id}/stop`),
   restartTask: (id: string) => post(`/api/accounts/${id}/restart`),
-  faceQr: (id: string, courseId?: string) =>
+  faceQr: (id: string, courseId?: string, job?: string) =>
     post<{ ok: boolean; qr_base64?: string; chapter?: string; msg?: string }>(
-      `/api/accounts/${id}/face-qr`, courseId ? { course_id: courseId } : {},
+      `/api/accounts/${id}/face-qr`,
+      { ...(courseId ? { course_id: courseId } : {}), ...(job ? { job } : {}) },
     ),
   faceConfig: (id: string, courseIds: string[]) =>
     post<{ ok: boolean; results?: Array<{ courseId: string; face_capture: boolean | null }>; msg?: string; error?: string }>(

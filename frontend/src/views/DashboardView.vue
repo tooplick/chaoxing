@@ -22,6 +22,7 @@ const logAccountId = ref('')
 const faceVisible = ref(false)
 const faceAccount = ref<Account | null>(null)
 const faceCourseId = ref<string | undefined>(undefined)
+const faceJob = ref<string | undefined>(undefined)
 const batchBusy = ref(false)
 
 onMounted(refreshAccounts)
@@ -49,6 +50,9 @@ function openLogs(account: Account) {
 function openFace(account: Account, courseId?: string) {
   faceAccount.value = account
   faceCourseId.value = courseId
+  // 被 403 拦截过时带上任务点, 人脸二维码走快路径直接定位
+  const st = statusOf(account.id)
+  faceJob.value = st.blocked_job ? `${st.blocked_job.jobid}:${st.blocked_job.objectid}` : undefined
   faceVisible.value = true
 }
 
@@ -179,7 +183,7 @@ async function stopAll() {
       @face="onFaceFromDialog"
     />
     <LogDrawer v-model="logVisible" :account-id="logAccountId" />
-    <FaceQrDialog v-model="faceVisible" :account="faceAccount" :course-id="faceCourseId" @verified="refreshAccounts" />
+    <FaceQrDialog v-model="faceVisible" :account="faceAccount" :course-id="faceCourseId" :blocked-job="faceJob" @verified="refreshAccounts" />
   </div>
 </template>
 
