@@ -78,12 +78,12 @@ def main() -> None:
     local_hosts = {"127.0.0.1", "localhost", "::1"}
     if args.host not in local_hosts and not auth.is_initialized():
         print(
-            f"[启动失败] 监听 {args.host} 前必须设置管理员口令:\n"
-            f"  方式一: 设置环境变量 CHAOXING_ADMIN_PASSWORD=<你的口令>\n"
-            f"  方式二: 先以 --host 127.0.0.1 启动, 在页面上完成口令初始化后重启",
+            f"[警告] 正在监听 {args.host} 且尚未设置管理员口令, 局域网内任何人都能打开登录页。\n"
+            f"  建议设置环境变量 CHAOXING_ADMIN_PASSWORD=<你的口令>,\n"
+            f"  或先以 --host 127.0.0.1 启动, 在页面上完成口令初始化后重启。\n"
+            f"  未设口令期间所有 API 均无法访问, 仅登录页可打开。",
             file=sys.stderr,
         )
-        sys.exit(1)
 
     print(f" * chaoxing Web 平台: http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, threaded=True)
