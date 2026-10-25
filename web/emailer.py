@@ -4,6 +4,7 @@ import smtplib
 import threading
 from email.header import Header
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 from api.logger import logger
 
@@ -44,8 +45,18 @@ def send_sync(cfg: dict, to: str, subject: str, body: str) -> tuple[bool, str]:
     try:
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = Header(subject, "utf-8")
-        sender = str(cfg.get("sender", "")).strip() or str(cfg["username"]).strip()
-        msg["From"] = sender
+        username = str(cfg["username"]).strip()
+        sender_raw = str(cfg.get("sender", "")).strip()
+        # 发件人支持昵称: 无 @ 视为显示昵称, 信封地址必须用认证邮箱(QQ 等服务会拒绝非邮箱 MAIL FROM)
+        if sender_raw and "@" in sender_raw:
+            envelope_from = sender_raw
+            msg["From"] = formataddr((sender_raw, sender_raw))
+        elif sender_raw:
+            envelope_from = username
+            msg["From"] = formataddr((sender_raw, username))
+        else:
+            envelope_from = username
+            msg["From"] = formataddr((username, username))
         msg["To"] = to
         port = int(cfg.get("port") or 465)
         use_ssl = cfg.get("ssl", True)
@@ -58,7 +69,7 @@ def send_sync(cfg: dict, to: str, subject: str, body: str) -> tuple[bool, str]:
             server.starttls()
         with server:
             server.login(str(cfg["username"]).strip(), str(cfg["password"]))
-            server.sendmail(sender, [to], msg.as_string())
+            server.sendmail(envelope_from, [to], msg.as_string())
         return True, "发送成功"
     except Exception as exc:  # noqa: BLE001 - 邮件失败不应影响主流程
         logger.warning(f"邮件发送失败: {exc}")

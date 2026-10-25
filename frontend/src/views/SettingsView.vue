@@ -166,7 +166,7 @@ async function saveNotification() {
             <el-input v-model="notification.password" type="password" show-password placeholder="邮箱密码或 SMTP 授权码(QQ/163 用授权码)" />
           </el-form-item>
           <el-form-item label="发件人">
-            <el-input v-model="notification.sender" placeholder="留空则用用户名" />
+            <el-input v-model="notification.sender" placeholder="留空则用用户名; 可填昵称(自动带邮箱)或完整邮箱" />
           </el-form-item>
           <el-form-item label="发送测试">
             <div style="display: flex; gap: 8px; width: 100%">
