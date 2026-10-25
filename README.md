@@ -21,6 +21,25 @@
 ## :point_up: 更新通知
 20241021更新通知： 感谢[sz134055](https://github.com/sz134055)提交代码[PR #360](https://github.com/Samueli924/chaoxing/pull/360)，**添加了对题库答题的支持**  
 
+### Docker 运行（Web 多账号平台）
+
+```bash
+# 构建并启动(自动构建前端, 无需本地 Node)
+docker compose up -d --build
+
+# 查看日志
+docker compose logs -f
+```
+
+打开 `http://<主机IP>:5000`（局域网/NAS 部署建议先在 `docker-compose.yml` 或环境变量里设置 `CHAOXING_ADMIN_PASSWORD`）。所有运行数据（账号、cookies、日志、设置）持久化在宿主机 `./data` 目录。
+
+CLI 方式复用同一镜像：
+
+```bash
+docker build -t chaoxing .
+docker run -it -v ./data:/app/data chaoxing python main.py -c /app/data/config.ini
+```
+
 ## :books: 使用方法
 
 ### 源码运行（Python 3.13+）
@@ -96,6 +115,27 @@ uv run --python 3.13 main.py -c config.ini
    - Docker版本默认使用挂载到 `/config/config.ini` 的配置文件
    - 首次运行时，会自动将 `config_template.ini` 复制到该位置作为模板
    - 可以将本地编辑好的配置文件挂载到容器中，按照上述示例命令操作
+
+## :globe_with_meridians: Web 多账号平台
+
+命令行之外，项目内置了一个 Web 控制台，支持**多学习通账号并发刷课**（每个账号独立子进程，登录会话互不影响）：
+
+```bash
+# 1. 构建前端(仅首次或前端更新后)
+cd frontend && npm install && npm run build && cd ..
+
+# 2. 启动平台
+python app.py                # 本机访问 http://127.0.0.1:5000
+python app.py --host 0.0.0.0 # 局域网访问(需先设置管理员口令)
+```
+
+- **管理员口令**：首次打开页面时引导设置（或用环境变量 `CHAOXING_ADMIN_PASSWORD` 预设）；监听非本机地址时必须已设口令，否则拒绝启动。连续输错 5 次锁定 60 秒
+- **账号管理**：添加账号时填写手机号+密码（或直接粘贴 cookie 串），「测试登录」会真实登录一次回显姓名；运行时 cookies 优先、失效自动回退账密
+- **刷课流程**：账号行点「刷课」→ 自动拉取该账号全部课程 → 勾选（支持全选）→ 配置倍速/并发/重做等参数 → 启动；表格实时显示状态、当前章节与进度，「日志」打开实时终端
+- **题库/大模型**：在「设置」页配置题库链与 AI 答题模型（支持连接测试），对所有账号生效；手动输入模式(TikuManual)不支持 Web 端
+- **风险提示**：多个账号从同一 IP 并发刷课存在平台风控风险，请保守设置各账号的 `jobs`；`data/` 目录内含明文账号密码与 API key，切勿提交或外传
+
+停止任务会终止对应子进程，当前章节作废；已完成任务点在下次启动时自动跳过（断点续刷）。
 
 ### 题库配置说明
 

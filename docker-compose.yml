@@ -1,0 +1,12 @@
+services:
+  chaoxing:
+    build: .
+    container_name: chaoxing-web
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # 局域网/公网部署时必须预设管理员口令(或首次本机访问设置)
+      - CHAOXING_ADMIN_PASSWORD=${CHAOXING_ADMIN_PASSWORD:-}
+    restart: unless-stopped

@@ -49,7 +49,8 @@ class NotificationService(ABC):
             config.read(self.CONFIG_PATH, encoding="utf8")
             return config['notification']
         except (KeyError, FileNotFoundError):
-            logger.info("未找到notification配置，已忽略外部通知功能")
+            # 未配置通知是正常状态, 不刷控制台
+            logger.trace("未找到notification配置，已忽略外部通知功能")
             self.disabled = True
             return None
 

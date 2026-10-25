@@ -157,3 +157,13 @@ cache.json
 start*.bat
 .workbuddy/
 myConfig/
+
+# Web 平台运行时数据(含明文账密与 API key, 切勿提交)
+data/
+
+# 前端工程
+frontend/node_modules/
+frontend/dist/
+
+# 本地工具目录
+.zcode/

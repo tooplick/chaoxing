@@ -80,6 +80,7 @@ class CxCaptcha:
 
         self.user_agent = user_agent
         self.cookies = cookies
+        self.unavailable = False  # 验证码图片接口不可用(404 已下线)时置 True
         self.s = session()
         self.s.headers.update({
             'User-Agent': self.user_agent,
@@ -101,9 +102,16 @@ class CxCaptcha:
         random_t = randint(0, 2147483647)
 
         res = self.s.get(api, params={'t': random_t})
-        if res.status_code == 200 and res.headers['Content-Type'] == 'image/png':
+        if res.status_code == 200 and 'image/' in res.headers.get('Content-Type', ''):
             return res.content
         else:
+            logger.debug(
+                f"获取验证码图片失败: status={res.status_code}, "
+                f"content-type={res.headers.get('Content-Type', '')}"
+            )
+            # 接口不存在(404)说明平台已下线验证码服务, 后续尝试不可能成功
+            if res.status_code == 404:
+                self.unavailable = True
             # 提供的Cookies或UA存在问题，导致未能正常获取验证码内容
             return None
 
@@ -122,11 +130,10 @@ class CxCaptcha:
             'ucode': cap_token,
             'app': 0
         }
-        res = self.s.get(api, params=params)
-        if res.status_code == 302:
-            return True
-        else:
-            return False
+        # 成功时服务端返回 302; 必须禁止自动跟随重定向,
+        # 否则跟随后的最终状态码是 200, 会把成功误判为失败
+        res = self.s.get(api, params=params, allow_redirects=False)
+        return 300 <= res.status_code < 400
 
     def recognition(self, img: bytes) -> str:
         """
@@ -158,6 +165,7 @@ class CxCaptcha:
             if not cap_img:
                 return False
             cap_token = self.recognition(cap_img)
+            logger.debug(f"验证码识别结果: {cap_token!r}")
             return self.submitCaptcha(cap_token)
         except Exception as e:
             logger.error(f"验证码自动验证时发生异常: {e}")

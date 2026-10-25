@@ -1,0 +1,64 @@
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+  background: #f5f7fa;
+}
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px 48px;
+}
+
+/* ---------- 移动端适配(断点 768px) ---------- */
+@media (max-width: 768px) {
+  .page {
+    padding: 10px 10px 32px;
+  }
+
+  /* 次要列在移动端隐藏(课程表格教师/ID 等) */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  body {
+    font-size: 14px;
+  }
+}
+
+.muted { color: #909399; font-size: 12px; }
+
+/* 终端风格日志面板 */
+.log-terminal {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 6px;
+  height: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-line {
+  display: block;
+}
+
+.log-TRACE { color: #888; }
+.log-DEBUG { color: #9cdcfe; }
+.log-INFO { color: #d4d4d4; }
+.log-SUCCESS { color: #4ec9b0; }
+.log-WARNING { color: #e5c07b; }
+.log-ERROR { color: #f14c4c; }
+.log-WEB { color: #569cd6; }
+
+.muted { color: #909399; font-size: 12px; }

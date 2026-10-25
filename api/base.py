@@ -734,12 +734,19 @@ class Chaoxing:
                     captcha_solver = CxCaptcha(user_agent=ua, cookies=cookies_str, ocr=ocr_inst)
                     solved = False
                     for attempt in range(3):
+                        if captcha_solver.unavailable:
+                            # 验证码图片接口已下线(404), 重试不可能成功
+                            logger.warning("验证码服务不可用(接口已下线), 跳过自动通关")
+                            break
                         logger.info(f"第 {attempt + 1} 次尝试通关验证码...")
                         if captcha_solver.try_pass():
                             logger.success("验证码通关成功！")
                             solved = True
                             break
                         else:
+                            if captcha_solver.unavailable:
+                                logger.warning("验证码服务不可用(接口已下线), 跳过自动通关")
+                                break
                             logger.warning("验证码验证失败，正在重试...")
                             time.sleep(2)
                     if solved:
@@ -787,13 +794,14 @@ class Chaoxing:
             logger.debug(
                 "视频进度上报返回403, jobid={}, 摘要={}",
                 _job.get("jobid"),
-                resp.text[:200],
+                resp.text[:60],
             )
 
             # 若出现两个rt参数都返回403的情况, 则跳过当前任务
-            logger.error("出现403报错, 尝试修复无效, 正在跳过当前任务点...")
-            logger.error("请求url: {}", resp.url)
-            logger.error("请求头: {}", dict(_session.headers) | headers)
+            logger.error("出现403报错, 尝试修复无效, 正在跳过当前任务点... jobid={}, 请求详情见TRACE日志",
+                         _job.get("jobid"))
+            logger.trace("403请求url: {}", resp.url)
+            logger.trace("403请求头: {}", dict(_session.headers) | headers)
             return False, 403
 
         logger.error(f"未知错误: {resp.status_code}")
@@ -883,11 +891,16 @@ class Chaoxing:
         forbidden_retry = 0
         max_forbidden_retry = 2
 
-        passed, state = self.video_progress_log(_session, _course, _job, _job_info, _dtoken, duration, duration,
-                                                _type, headers=headers, _isdrag=4)
-        if passed:
-            logger.info("任务瞬间完成: {}", _job['name'])
-            return StudyResult.SUCCESS
+        # 仅当服务端记录的进度已到片尾时才尝试直接完成上报(收尾差一点看完的视频);
+        # 对未看过的视频开局就上报"已看完"(playingTime=duration)会被风控判定为异常进度,
+        # 触发 403 拦截甚至人脸核验
+        passed = False
+        if play_time >= duration:
+            passed, state = self.video_progress_log(_session, _course, _job, _job_info, _dtoken, duration, duration,
+                                                    _type, headers=headers, _isdrag=4)
+            if passed:
+                logger.info("任务瞬间完成: {}", _job['name'])
+                return StudyResult.SUCCESS
 
         pbar = None
         try:
