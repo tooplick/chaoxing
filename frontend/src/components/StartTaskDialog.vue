@@ -20,7 +20,7 @@ const props = defineProps<{ modelValue: boolean; account: Account | null }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'started'): void
-  (e: 'face', account: Account): void
+  (e: 'face', account: Account, courseId?: string): void
 }>()
 
 const visible = computed({
@@ -245,7 +245,7 @@ async function start() {
       >
         <template #title>
           所选 {{ selectedWithFace.length }} 门课程要求人脸采集（未完成时视频到抓拍点会被拦）：
-          <el-button size="small" type="danger" @click="emit('face', props.account!)">立即采集</el-button>
+          <el-button size="small" type="danger" @click="emit('face', props.account!, selectedWithFace[0]?.courseId)">立即采集</el-button>
           完成后抓拍要求即满足
         </template>
       </el-alert>

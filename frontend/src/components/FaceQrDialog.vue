@@ -8,7 +8,7 @@ import { useIsMobile } from '../composables/useIsMobile'
 const { isMobile } = useIsMobile()
 import type { Account } from '../types'
 
-const props = defineProps<{ modelValue: boolean; account: Account | null }>()
+const props = defineProps<{ modelValue: boolean; account: Account | null; courseId?: string }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void; (e: 'verified'): void }>()
 
 const visible = computed({
@@ -30,7 +30,7 @@ async function loadQr() {
   error.value = ''
   done.value = false
   try {
-    const res = await api.faceQr(props.account.id)
+    const res = await api.faceQr(props.account.id, props.courseId)
     if (!res.ok || !res.qr_base64) throw new Error(res.msg || '获取二维码失败')
     qrImage.value = `data:image/png;base64,${res.qr_base64}`
     chapter.value = res.chapter ?? ''

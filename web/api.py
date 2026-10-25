@@ -346,22 +346,13 @@ def status():
 
 def _diagnose_course_arg(account_id: str) -> str | None:
     """从课程缓存中拼出 face-check 需要的 courseId:clazzId:cpi."""
-    course_id = None
     account = _store.get_account(account_id)
-    if account:
-        course_id = (account.get("course_ids") or [""])[0]
-    cache_file = os.path.join(_store.account_dir(account_id), "courses.json")
-    if not course_id or not os.path.exists(cache_file):
+    course_id = (account.get("course_ids") or [""])[0] if account else ""
+    courses = _ensure_courses(account_id)
+    meta = next((c for c in courses if str(c.get("courseId")) == course_id), None) or (courses[0] if courses else None)
+    if not meta:
         return None
-    try:
-        with open(cache_file, "r", encoding="utf-8") as f:
-            cached = json.load(f)
-        meta = next((c for c in cached.get("courses", []) if c.get("courseId") == course_id), None)
-        if meta:
-            return f"{meta['courseId']}:{meta['clazzId']}:{meta['cpi']}"
-    except (json.JSONDecodeError, OSError, KeyError):
-        pass
-    return None
+    return f"{meta['courseId']}:{meta['clazzId']}:{meta['cpi']}"
 
 
 def _maybe_diagnose_block(account: dict, run) -> None:
@@ -597,6 +588,41 @@ def chapter_jobs(account_id):
 _face_tokens: dict[str, dict] = {}
 
 
+def _load_courses_cache(account_id: str) -> list:
+    cache_file = os.path.join(_store.account_dir(account_id), "courses.json")
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            return json.load(f).get("courses", [])
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _ensure_courses(account_id: str) -> list:
+    """读课程缓存, 缺失时自动拉取一次(全新部署未打开过刷课对话框的场景)."""
+    courses = _load_courses_cache(account_id)
+    if courses:
+        return courses
+    account = _store.get_account(account_id)
+    if not account:
+        return []
+    account_dir = _store.account_dir(account_id)
+    config_path = os.path.join(account_dir, "login-test.ini")
+    write_config(config_path, account, [], dict(account.get("params") or {}), {}, {})
+    try:
+        result = _run_cli(["courses", "--config", config_path], account_dir, timeout=120)
+    except RuntimeError:
+        return []
+    if result.get("ok"):
+        result["fetched_at"] = time.time()
+        try:
+            with open(os.path.join(account_dir, "courses.json"), "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False)
+        except OSError:
+            pass
+        return result.get("courses", [])
+    return []
+
+
 @bp.post("/accounts/<account_id>/face-qr")
 def face_qr(account_id):
     """拉取人脸采集二维码(定位当前课程中有人脸要求的任务点)."""
@@ -604,21 +630,13 @@ def face_qr(account_id):
     if not account:
         return jsonify({"error": "账号不存在"}), 404
 
-    # 从缓存的课程列表中找出 clazzId/cpi(account.course_ids 记忆的是 courseId)
-    course_id = (account.get("course_ids") or [""])[0]
-    course_meta = None
-    cache_file = os.path.join(_store.account_dir(account_id), "courses.json")
-    if os.path.exists(cache_file):
-        try:
-            with open(cache_file, "r", encoding="utf-8") as f:
-                cached = json.load(f)
-            course_meta = next(
-                (c for c in cached.get("courses", []) if c.get("courseId") == course_id), None
-            )
-        except (json.JSONDecodeError, OSError):
-            course_meta = None
-    if not course_meta:
-        return jsonify({"error": "没有该账号的课程缓存, 请先打开一次「刷课」对话框拉取课程"}), 400
+    # 课程定位优先级: 前端指定(人脸预警场景传当前选中课程) > 记忆选择 > 缓存第一门
+    data = request.get_json(silent=True) or {}
+    wanted = str(data.get("course_id", "")).strip() or (account.get("course_ids") or [""])[0]
+    courses = _ensure_courses(account_id)
+    if not courses:
+        return jsonify({"error": "课程列表获取失败, 请稍后重试或先打开「刷课」对话框"}), 400
+    course_meta = next((c for c in courses if str(c.get("courseId")) == wanted), None) or courses[0]
 
     run = _runner.get_run(account_id)
     chapter_title = (run.current_chapter if run else "") or ""

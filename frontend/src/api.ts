@@ -73,7 +73,10 @@ export const api = {
   }) => post(`/api/accounts/${id}/start`, payload),
   stopTask: (id: string) => post(`/api/accounts/${id}/stop`),
   restartTask: (id: string) => post(`/api/accounts/${id}/restart`),
-  faceQr: (id: string) => post<{ ok: boolean; qr_base64?: string; chapter?: string; msg?: string }>(`/api/accounts/${id}/face-qr`),
+  faceQr: (id: string, courseId?: string) =>
+    post<{ ok: boolean; qr_base64?: string; chapter?: string; msg?: string }>(
+      `/api/accounts/${id}/face-qr`, courseId ? { course_id: courseId } : {},
+    ),
   faceConfig: (id: string, courseIds: string[]) =>
     post<{ ok: boolean; results?: Array<{ courseId: string; face_capture: boolean | null }>; msg?: string; error?: string }>(
       `/api/accounts/${id}/face-config`, { course_ids: courseIds },

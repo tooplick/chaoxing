@@ -21,6 +21,7 @@ const logVisible = ref(false)
 const logAccountId = ref('')
 const faceVisible = ref(false)
 const faceAccount = ref<Account | null>(null)
+const faceCourseId = ref<string | undefined>(undefined)
 const batchBusy = ref(false)
 
 onMounted(refreshAccounts)
@@ -45,15 +46,16 @@ function openLogs(account: Account) {
   logVisible.value = true
 }
 
-function openFace(account: Account) {
+function openFace(account: Account, courseId?: string) {
   faceAccount.value = account
+  faceCourseId.value = courseId
   faceVisible.value = true
 }
 
-/** 从刷课对话框的预警横幅直接发起人脸采集: 关闭选课框再开扫码框 */
-function onFaceFromDialog(account: Account) {
+/** 从刷课对话框的预警横幅直接发起人脸采集: 关闭选课框再开扫码框(带上当前选中的课程) */
+function onFaceFromDialog(account: Account, courseId?: string) {
   startVisible.value = false
-  openFace(account)
+  openFace(account, courseId)
 }
 
 async function stopTask(account: Account) {
@@ -177,7 +179,7 @@ async function stopAll() {
       @face="onFaceFromDialog"
     />
     <LogDrawer v-model="logVisible" :account-id="logAccountId" />
-    <FaceQrDialog v-model="faceVisible" :account="faceAccount" @verified="refreshAccounts" />
+    <FaceQrDialog v-model="faceVisible" :account="faceAccount" :course-id="faceCourseId" @verified="refreshAccounts" />
   </div>
 </template>
 
