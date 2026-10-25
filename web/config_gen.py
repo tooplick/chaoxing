@@ -123,9 +123,11 @@ def build_sections(account: dict, course_ids: list[str], params: dict,
         sections["tiku"] = tiku_section
 
     if notification and notification.get("provider", "").strip():
-        sections["notification"] = {
-            k: str(v) for k, v in notification.items() if str(v).strip() != ""
-        }
+        # Email 由 Web 平台自身发送(web/emailer), 子进程的通知模块不认识该 provider
+        if str(notification.get("provider")).strip() != "Email":
+            sections["notification"] = {
+                k: str(v) for k, v in notification.items() if str(v).strip() != ""
+            }
 
     return sections
 
