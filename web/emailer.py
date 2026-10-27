@@ -76,12 +76,15 @@ def send_sync(cfg: dict, to: str, subject: str, body: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-def send_async(store, to: str, subject: str, body: str) -> None:
-    """后台线程发送, 不阻塞任务 watcher / 状态轮询."""
+def send_async(cfg: dict, to: str, subject: str, body: str) -> None:
+    """后台线程发送, 不阻塞任务 watcher / 状态轮询.
+
+    cfg 为 resolve_cfg 解析出的配置 dict(调用方不再传 Store).
+    """
     if not to or "@" not in to:
         return
 
     def worker():
-        send_sync(store.get_email(), to, subject, body)
+        send_sync(cfg, to, subject, body)
 
     threading.Thread(target=worker, daemon=True, name="email-notify").start()
